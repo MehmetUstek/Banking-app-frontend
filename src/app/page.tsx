@@ -1,95 +1,280 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+"use client";
 
-export default function Home() {
+import React, { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import {
+  Container,
+  Typography,
+  Box,
+  TextField,
+  Button,
+  Alert,
+  MenuItem,
+  Select,
+  FormControl,
+  InputLabel,
+} from "@mui/material";
+
+interface Account {
+  accountNumber: string;
+  balance: number;
+}
+
+export default function DashboardPage() {
+  const router = useRouter();
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [totalBalance, setTotalBalance] = useState<number>(0.0);
+  const [error, setError] = useState("");
+
+  // Form state for transactions
+  const [transactionType, setTransactionType] = useState<
+    "deposit" | "withdraw"
+  >("deposit");
+  const [depositAmount, setDepositAmount] = useState("");
+  const [transferAmount, setTransferAmount] = useState("");
+  const [senderAccount, setSenderAccount] = useState("");
+  const [receiverAccount, setReceiverAccount] = useState("");
+
+  // On component mount, fetch accounts and total balance.
+  useEffect(() => {
+    fetchAccounts();
+    fetchTotalBalance();
+  }, [router]);
+
+  const fetchAccounts = async () => {
+    try {
+      const res = await fetch("http://localhost:8080/api/bank/show_accounts", {
+        method: "GET",
+        credentials: "include",
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAccounts(data);
+      } else if (res.status === 401 || res.status === 403) {
+        document.cookie =
+          "JWT_TOKEN=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+        router.push("/login");
+      }
+    } catch (err) {
+      console.error("Failed to fetch accounts", err);
+    }
+  };
+
+  const fetchTotalBalance = async () => {
+    try {
+      const res = await fetch(
+        "http://localhost:8080/api/bank/account/view_total_balance",
+        {
+          method: "GET",
+          credentials: "include",
+        }
+      );
+      if (res.ok) {
+        const data = await res.json();
+        setTotalBalance(data);
+      } else if (res.status === 401 || res.status === 403) {
+        document.cookie =
+          "JWT_TOKEN=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+        router.push("/login");
+      }
+    } catch (err) {
+      console.error("Failed to fetch total balance", err);
+    }
+  };
+
+  const handleDepositWithdraw = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (accounts.length === 0) return;
+    const endpoint =
+      transactionType === "deposit"
+        ? "http://localhost:8080/api/bank/account/deposit"
+        : "http://localhost:8080/api/bank/account/withdraw";
+    try {
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          accountNumber: accounts[0].accountNumber,
+          amount: parseFloat(depositAmount),
+        }),
+      });
+      if (res.ok) {
+        fetchAccounts();
+        fetchTotalBalance();
+      } else {
+        const errData = await res.json();
+        setError(errData.message || "Transaction failed");
+      }
+    } catch {
+      setError("An error occurred during the transaction");
+    }
+  };
+
+  const handleTransfer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (accounts.length === 0) return;
+    try {
+      const res = await fetch(
+        "http://localhost:8080/api/bank/account/transfer",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            senderAccountNumber: senderAccount,
+            receiverAccountNumber: receiverAccount,
+            amount: parseFloat(transferAmount),
+          }),
+        }
+      );
+      if (res.ok) {
+        fetchAccounts();
+        fetchTotalBalance();
+      } else {
+        const errData = await res.json();
+        setError(errData.message || "Transfer failed");
+      }
+    } catch {
+      setError("An error occurred while transferring funds");
+    }
+  };
+
+  const handleCreateAccount = async () => {
+    try {
+      const res = await fetch("http://localhost:8080/api/bank/account/create", {
+        method: "POST",
+        credentials: "include",
+      });
+      if (res.ok) {
+        fetchAccounts();
+        fetchTotalBalance();
+      } else {
+        const errData = await res.json();
+        setError(errData.message || "Account creation failed");
+      }
+    } catch {
+      setError("An error occurred while creating the account");
+    }
+  };
+
   return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol>
-          <li>
-            Get started by editing <code>src/app/page.tsx</code>.
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+    <Container maxWidth="md">
+      <Box sx={{ mt: 4 }}>
+        <Typography variant="h4" gutterBottom>
+          Dashboard
+        </Typography>
+        {error && <Alert severity="error">{error}</Alert>}
+        <Button
+          variant="contained"
+          onClick={handleCreateAccount}
+          sx={{ mt: 2 }}
+        >
+          Create New Account
+        </Button>
+        {/* Deposit/Withdraw Section */}
+        <br />
+        <br />
+        <br />
+        <Typography variant="subtitle2">
+          Warning: Withdraw/deposit functionaly is left open for test purposes
+          only.
+          <br></br>
+          Normally a user cannot deposit money into an account without actually
+          sending a money from another bank or using an ATM.
+        </Typography>
 
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+        <Box sx={{ mt: 4 }}>
+          <Typography variant="h5">Deposit / Withdraw</Typography>
+          <FormControl fullWidth sx={{ mt: 2 }}>
+            <InputLabel id="transaction-type-label">
+              Transaction Type
+            </InputLabel>
+            <Select
+              labelId="transaction-type-label"
+              value={transactionType}
+              label="Transaction Type"
+              onChange={(e) =>
+                setTransactionType(e.target.value as "deposit" | "withdraw")
+              }
+            >
+              <MenuItem value="deposit">Deposit</MenuItem>
+              <MenuItem value="withdraw">Withdraw</MenuItem>
+            </Select>
+          </FormControl>
+          <TextField
+            label="Amount"
+            variant="outlined"
+            fullWidth
+            type="number"
+            sx={{ mt: 2 }}
+            value={depositAmount}
+            onChange={(e) => setDepositAmount(e.target.value)}
+          />
+          <Button
+            variant="contained"
+            sx={{ mt: 2 }}
+            onClick={handleDepositWithdraw}
           >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.secondary}
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className={styles.footer}>
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
+            {transactionType === "deposit" ? "Deposit" : "Withdraw"}
+          </Button>
+        </Box>
+        {/* Transfer Money Section */}
+        <Box sx={{ mt: 4 }}>
+          <Typography variant="h5">Transfer Money</Typography>
+          <TextField
+            label="Sender Account Number"
+            variant="outlined"
+            fullWidth
+            sx={{ mt: 2 }}
+            value={senderAccount}
+            onChange={(e) => setSenderAccount(e.target.value)}
           />
-          Learn
-        </a>
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
+          <TextField
+            label="Receiver Account Number"
+            variant="outlined"
+            fullWidth
+            sx={{ mt: 2 }}
+            value={receiverAccount}
+            onChange={(e) => setReceiverAccount(e.target.value)}
           />
-          Examples
-        </a>
-        <a
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
+
+          <TextField
+            label="Amount"
+            variant="outlined"
+            fullWidth
+            type="number"
+            sx={{ mt: 2 }}
+            value={transferAmount}
+            onChange={(e) => setTransferAmount(e.target.value)}
           />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+          <Button variant="contained" sx={{ mt: 2 }} onClick={handleTransfer}>
+            Transfer
+          </Button>
+        </Box>
+        {/* Accounts Display Section */}
+        <Box sx={{ mt: 4, mb: 10 }}>
+          <Typography variant="h5">
+            Total Balance: {totalBalance.toFixed(2)}
+          </Typography>
+          <Box sx={{ display: "flex", overflowX: "auto", gap: 2, mt: 2 }}>
+            {accounts.map((account) => (
+              <Box
+                key={account.accountNumber}
+                sx={{
+                  flex: "0 0 auto",
+                  p: 2,
+                  border: "1px solid #ccc",
+                  borderRadius: 1,
+                }}
+              >
+                <Typography>Account Number: {account.accountNumber}</Typography>
+                <Typography>Balance: {account.balance}</Typography>
+              </Box>
+            ))}
+          </Box>
+        </Box>
+      </Box>
+    </Container>
   );
 }
