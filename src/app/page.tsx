@@ -41,6 +41,10 @@ export default function DashboardPage() {
     fetchTotalBalance();
   }, [router]);
 
+  const handleAccountClick = (accountNumber: string) => {
+    router.push(`/transaction-history?accountNumber=${accountNumber}`);
+  };
+
   const fetchAccounts = async () => {
     try {
       const res = await fetch("http://localhost:8080/api/bank/show_accounts", {
@@ -116,7 +120,7 @@ export default function DashboardPage() {
     if (accounts.length === 0) return;
     try {
       const res = await fetch(
-        "http://localhost:8080/api/bank/account/transfer",
+        "http://localhost:8080/api/bank/transaction/transfer",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -270,6 +274,13 @@ export default function DashboardPage() {
               >
                 <Typography>Account Number: {account.accountNumber}</Typography>
                 <Typography>Balance: {account.balance}</Typography>
+                <Button
+                  variant="contained"
+                  sx={{ mt: 2 }}
+                  onClick={() => handleAccountClick(account.accountNumber)}
+                >
+                  View Transaction History
+                </Button>
               </Box>
             ))}
           </Box>
