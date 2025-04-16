@@ -34,9 +34,14 @@ export default function DashboardPage() {
   const [transferAmount, setTransferAmount] = useState("");
   const [senderAccount, setSenderAccount] = useState("");
   const [receiverAccount, setReceiverAccount] = useState("");
+  const [csrfToken, setCsrfToken] = useState<string | null>(null);
 
   // On component mount, fetch accounts and total balance.
   useEffect(() => {
+    // Clear the X-XSRF-TOKEN cookie on page load
+    document.cookie =
+      "XSRF-TOKEN=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+
     fetchAccounts();
     fetchTotalBalance();
   }, [router]);
@@ -54,12 +59,19 @@ export default function DashboardPage() {
       if (res.ok) {
         const data = await res.json();
         setAccounts(data);
+        const token = res.headers.get("X-CSRF-TOKEN");
+        console.log("header response", token);
+        setCsrfToken(token);
+        // if (token) {
+        //   sessionStorage.setItem("X-XSRF-TOKEN", token);
+        // }
       } else if (res.status === 401 || res.status === 403) {
         document.cookie =
           "JWT_TOKEN=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
         router.push("/login");
       }
     } catch (err) {
+      router.push("/login");
       console.error("Failed to fetch accounts", err);
     }
   };
@@ -96,7 +108,10 @@ export default function DashboardPage() {
     try {
       const res = await fetch(endpoint, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "X-XSRF-TOKEN": csrfToken ?? "",
+        },
         credentials: "include",
         body: JSON.stringify({
           accountNumber: accounts[0].accountNumber,
@@ -123,7 +138,10 @@ export default function DashboardPage() {
         "http://localhost:8080/api/bank/transaction/transfer",
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "X-XSRF-TOKEN": csrfToken ?? "",
+          },
           credentials: "include",
           body: JSON.stringify({
             senderAccountNumber: senderAccount,
@@ -148,6 +166,9 @@ export default function DashboardPage() {
     try {
       const res = await fetch("http://localhost:8080/api/bank/account/create", {
         method: "POST",
+        headers: {
+          "X-XSRF-TOKEN": csrfToken ?? "",
+        },
         credentials: "include",
       });
       if (res.ok) {

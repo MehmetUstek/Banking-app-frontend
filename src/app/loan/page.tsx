@@ -23,6 +23,7 @@ export default function LoanPage() {
   // For repayment
   const [loanId, setLoanId] = useState("");
   const [paymentAmount, setPaymentAmount] = useState("");
+  const [csrfToken, setCsrfToken] = useState<string | null>(null);
 
   const fetchLoans = async () => {
     try {
@@ -33,7 +34,9 @@ export default function LoanPage() {
       if (res.ok) {
         const data = await res.json();
         setLoans(data);
-        console.log(data);
+        const token = res.headers.get("X-CSRF-TOKEN");
+        console.log("header response", token);
+        setCsrfToken(token);
       } else {
         router.push("/login");
 
@@ -55,6 +58,7 @@ export default function LoanPage() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "X-XSRF-TOKEN": csrfToken ?? "",
         },
         credentials: "include",
         body: JSON.stringify({
@@ -84,6 +88,7 @@ export default function LoanPage() {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
+          "X-XSRF-TOKEN": csrfToken ?? "",
         },
         credentials: "include",
         body: JSON.stringify({

@@ -32,6 +32,10 @@ export default function LoginPage() {
         body: JSON.stringify({ customerNumber, password }),
       });
       if (res.ok) {
+        const csrfToken = res.headers.get("X-CSRF-TOKEN");
+        if (csrfToken) {
+          sessionStorage.setItem("X-XSRF-TOKEN", csrfToken);
+        }
         router.push("/");
       } else {
         const errorData = await res.json();

@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState } from "react";
-import { useRouter } from "next/navigation";
 import {
   Container,
   TextField,
@@ -12,12 +11,12 @@ import {
 } from "@mui/material";
 
 export default function SignupPage() {
-  const router = useRouter();
   const [name, setName] = useState<string>("");
   const [email, setEmail] = useState<string>("");
   const [phoneNumber, setPhoneNumber] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [error, setError] = useState<string>("");
+  const [customerNumber, setCustomerNumber] = useState<string | null>(null);
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,7 +27,9 @@ export default function SignupPage() {
         body: JSON.stringify({ name, email, phoneNumber, password }),
       });
       if (res.ok) {
-        router.push("/login");
+        const data = await res.json();
+        setCustomerNumber(data.customerNumber); // Store the customerNumber
+        setError(""); // Clear any previous errors
       } else {
         const errorData = await res.json();
         setError(errorData.message || "Signup failed");
@@ -85,6 +86,11 @@ export default function SignupPage() {
           {error && (
             <Alert severity="error" sx={{ mt: 2 }}>
               {error}
+            </Alert>
+          )}
+          {customerNumber && (
+            <Alert severity="success" sx={{ mt: 2 }}>
+              Signup successful! Your customer number is: {customerNumber}
             </Alert>
           )}
           <Button type="submit" variant="contained" fullWidth sx={{ mt: 3 }}>
