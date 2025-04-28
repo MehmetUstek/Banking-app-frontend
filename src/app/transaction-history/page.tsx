@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Container,
@@ -14,13 +14,13 @@ import {
 } from "@mui/material";
 import { TransactionDetail } from "@/model/TransactionDetail";
 
-export default function TransactionHistoryPage() {
+function TransactionHistoryContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const currentAccountNumber = searchParams.get("accountNumber");
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const searchParams = useSearchParams();
-  const currentAccountNumber = searchParams.get("accountNumber");
 
   useEffect(() => {
     const fetchTransactionHistory = async () => {
@@ -97,5 +97,19 @@ export default function TransactionHistoryPage() {
         </List>
       </Box>
     </Container>
+  );
+}
+
+export default function TransactionHistoryPage() {
+  return (
+    <Suspense
+      fallback={
+        <Container>
+          <CircularProgress />
+        </Container>
+      }
+    >
+      <TransactionHistoryContent />
+    </Suspense>
   );
 }

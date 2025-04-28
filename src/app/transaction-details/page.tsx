@@ -1,17 +1,16 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Container, Typography, Box, Alert, Button } from "@mui/material";
 import { TransactionDetail } from "@/model/TransactionDetail";
 
-export default function TransactionDetailsPage() {
+function TransactionDetailsContent() {
   const router = useRouter();
-
+  const searchParams = useSearchParams();
   const [transactionDetails, setTransactionDetails] =
     useState<TransactionDetail | null>(null);
   const [error, setError] = useState("");
-  const searchParams = useSearchParams();
   const transactionId = searchParams.get("transactionId");
 
   useEffect(() => {
@@ -40,6 +39,10 @@ export default function TransactionDetailsPage() {
       setError("An error occurred while fetching transaction details");
     }
   };
+
+  if (!transactionId) {
+    return <Typography variant="body1">Transaction ID not found.</Typography>;
+  }
 
   return (
     <Container maxWidth="md">
@@ -80,5 +83,19 @@ export default function TransactionDetailsPage() {
         )}
       </Box>
     </Container>
+  );
+}
+
+export default function TransactionDetailsPage() {
+  return (
+    <Suspense
+      fallback={
+        <Container>
+          <Typography>Loading...</Typography>
+        </Container>
+      }
+    >
+      <TransactionDetailsContent />
+    </Suspense>
   );
 }
